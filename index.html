@@ -1,0 +1,2532 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IG SafePulse — Personal Tracker & Post Scheduler</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              purple: '#833AB4',
+              pink: '#E1306C',
+              orange: '#F77737',
+              amber: '#FCAF45',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- JSZip via CDN untuk membaca file .zip resmi ekspor Instagram secara lokal -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    /* Utilitas gradien khas Instagram yang lembut & modern */
+    .ig-gradient {
+      background: linear-gradient(135deg, #833AB4 0%, #E1306C 52%, #F77737 100%);
+    }
+    .ig-gradient-soft {
+      background: linear-gradient(135deg, rgba(131, 58, 180, 0.12) 0%, rgba(225, 48, 108, 0.12) 52%, rgba(247, 119, 55, 0.12) 100%);
+    }
+    .ig-text-gradient {
+      background: linear-gradient(135deg, #833AB4 0%, #E1306C 55%, #F77737 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .ig-ring {
+      background: linear-gradient(135deg, #833AB4, #E1306C, #FCAF45);
+      padding: 2px;
+    }
+    /* Custom scrollbar halus */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.7);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased transition-colors duration-200 min-h-screen flex flex-col">
+
+  <!-- ==================== HEADER / NAVBAR ==================== -->
+  <header class="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-3">
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl ig-gradient flex items-center justify-center text-white shadow-md shadow-pink-500/20 shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-extrabold tracking-tight">
+                IG <span class="ig-text-gradient">SafePulse</span>
+              </h1>
+              <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                100% Lokal & Aman
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Personal Tracker, Cleanup Helper & Post Scheduler</p>
+          </div>
+        </div>
+
+        <!-- Right Controls -->
+        <div class="flex items-center gap-2">
+          <button onclick="loadDemoData()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5" title="Isi data simulasi untuk mencoba semua fitur">
+            <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span>Muat Data Demo</span>
+          </button>
+
+          <!-- Dark/Light Theme Toggle -->
+          <button onclick="toggleTheme()" id="themeToggleBtn" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition" aria-label="Ganti Tema">
+            <svg id="sunIcon" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="5"></circle>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+            <svg id="moonIcon" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Navigation Tabs (4 Tab Utama) -->
+      <nav class="flex gap-1.5 overflow-x-auto pb-2.5 pt-1 no-scrollbar" aria-label="Navigasi Utama">
+        <button onclick="switchMainTab('tracker')" data-main-tab="tracker" class="main-tab-btn px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>Dashboard & Tracker</span>
+        </button>
+
+        <button onclick="switchMainTab('cleanup')" data-main-tab="cleanup" class="main-tab-btn px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span>Organic Cleanup & Growth</span>
+        </button>
+
+        <button onclick="switchMainTab('scheduler')" data-main-tab="scheduler" class="main-tab-btn px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span>Post Scheduler</span>
+        </button>
+
+        <button onclick="switchMainTab('guide')" data-main-tab="guide" class="main-tab-btn px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          <span>Panduan & Backup</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: DASHBOARD & TRACKER                                   -->
+    <!-- ============================================================ -->
+    <section id="tab-tracker" class="tab-panel space-y-6">
+
+      <!-- Upload & Snapshot Bar -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Drag & Drop Upload Box -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+          <div id="dropZone" class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-pink-500 dark:hover:border-pink-500 rounded-xl p-5 text-center transition cursor-pointer ig-gradient-soft">
+            <input type="file" id="igFileInput" accept=".zip,.json" multiple class="hidden" />
+            <div class="w-12 h-12 mx-auto rounded-2xl ig-gradient text-white flex items-center justify-center shadow-md mb-3">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <h2 class="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
+              Unggah File Ekspor Resmi Instagram (.ZIP atau .JSON)
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-lg mx-auto">
+              Drag & drop file <code class="px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 font-mono">.zip</code> langsung dari Meta, atau pilih file <code class="px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 font-mono">followers_1.json</code> (bisa multi-file) & <code class="px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 font-mono">following.json</code>.
+            </p>
+            <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <button type="button" onclick="document.getElementById('igFileInput').click()" class="px-4 py-2 rounded-xl text-xs font-semibold text-white ig-gradient shadow-sm hover:opacity-95 transition">
+                Pilih File dari Perangkat
+              </button>
+              <span class="text-[11px] text-slate-400">Diproses 100% di browser tanpa upload server</span>
+            </div>
+          </div>
+
+          <!-- Staging Bar jika user upload JSON secara terpisah (misal followers dulu baru following) -->
+          <div id="stagingBanner" class="hidden mt-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="text-xs space-y-1">
+              <p class="font-bold text-amber-700 dark:text-amber-300">File JSON Sebagian Terdeteksi:</p>
+              <div class="flex flex-wrap gap-3 text-slate-600 dark:text-slate-300">
+                <span id="stageFollowersStatus">Followers: Belum ada</span>
+                <span>•</span>
+                <span id="stageFollowingStatus">Following: Belum ada</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="commitStagedFiles()" id="commitStageBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 transition">
+                Simpan Snapshot
+              </button>
+              <button onclick="clearStaging()" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Snapshot Historis Selector -->
+        <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold flex items-center gap-2">
+                <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Perbandingan Snapshot Historis</span>
+              </h3>
+              <span id="snapshotCountBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                0 Snapshot
+              </span>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Data Utama (Terbaru)</label>
+                <select id="baseSnapSelect" onchange="handleSnapshotSelectChange()" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500">
+                  <option value="">Belum ada data snapshot</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Bandingkan Dengan (Sebelumnya)</label>
+                <select id="compareSnapSelect" onchange="handleSnapshotSelectChange()" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500">
+                  <option value="">Tidak ada pembanding</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-slate-400">Otomatis mendeteksi Unfollower baru</span>
+            <button onclick="confirmDeleteCurrentSnapshot()" id="deleteSnapBtn" class="hidden text-rose-500 hover:text-rose-600 font-semibold">
+              Hapus Snapshot Ini
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 Kartu Ringkasan Statistik -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <!-- 1. Total Followers -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Total Followers</span>
+            <span id="statFollowersDelta" class="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500">-</span>
+          </div>
+          <p id="statFollowers" class="text-2xl font-extrabold mt-2 tracking-tight">0</p>
+        </div>
+
+        <!-- 2. Total Following -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Total Following</span>
+            <span id="statRatioBadge" class="text-[11px] font-semibold text-purple-600 dark:text-purple-400">Rasio -</span>
+          </div>
+          <p id="statFollowing" class="text-2xl font-extrabold mt-2 tracking-tight">0</p>
+        </div>
+
+        <!-- 3. Mutuals -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-emerald-400 transition" onclick="selectTrackerFilter('mutuals')">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Mutuals</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          </div>
+          <p id="statMutuals" class="text-2xl font-extrabold mt-2 tracking-tight text-emerald-600 dark:text-emerald-400">0</p>
+        </div>
+
+        <!-- 4. Not Following Back -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-amber-400 transition" onclick="selectTrackerFilter('not_following_back')">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Not Following Back</span>
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          </div>
+          <p id="statNotFollowingBack" class="text-2xl font-extrabold mt-2 tracking-tight text-amber-600 dark:text-amber-400">0</p>
+        </div>
+
+        <!-- 5. New Unfollowers -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-rose-400 transition" onclick="selectTrackerFilter('new_unfollowers')">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">New Unfollowers</span>
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          </div>
+          <p id="statNewUnfollowers" class="text-2xl font-extrabold mt-2 tracking-tight text-rose-600 dark:text-rose-400">0</p>
+        </div>
+
+        <!-- 6. New Followers -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-sky-400 transition" onclick="selectTrackerFilter('new_followers')">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">New Followers</span>
+            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+          </div>
+          <p id="statNewFollowers" class="text-2xl font-extrabold mt-2 tracking-tight text-sky-600 dark:text-sky-400">0</p>
+        </div>
+      </div>
+
+      <!-- Area Filter Sub-Tab & Daftar Akun -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <!-- Filter Sub-Tabs -->
+        <div class="border-b border-slate-200 dark:border-slate-800 px-4 pt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <button onclick="selectTrackerFilter('new_unfollowers')" data-filter="new_unfollowers" class="tracker-filter-btn px-3.5 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition whitespace-nowrap">
+            New Unfollowers <span id="badge-new_unfollowers" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-rose-500/15 text-rose-600 dark:text-rose-400">0</span>
+          </button>
+          <button onclick="selectTrackerFilter('new_followers')" data-filter="new_followers" class="tracker-filter-btn px-3.5 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition whitespace-nowrap">
+            New Followers <span id="badge-new_followers" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-sky-500/15 text-sky-600 dark:text-sky-400">0</span>
+          </button>
+          <button onclick="selectTrackerFilter('not_following_back')" data-filter="not_following_back" class="tracker-filter-btn px-3.5 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition whitespace-nowrap">
+            Not Following Back <span id="badge-not_following_back" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400">0</span>
+          </button>
+          <button onclick="selectTrackerFilter('fans')" data-filter="fans" class="tracker-filter-btn px-3.5 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition whitespace-nowrap">
+            Fans <span id="badge-fans" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-500/15 text-purple-600 dark:text-purple-400">0</span>
+          </button>
+          <button onclick="selectTrackerFilter('mutuals')" data-filter="mutuals" class="tracker-filter-btn px-3.5 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition whitespace-nowrap">
+            Mutuals <span id="badge-mutuals" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">0</span>
+          </button>
+          <button onclick="selectTrackerFilter('whitelist')" data-filter="whitelist" class="tracker-filter-btn px-3.5 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 transition whitespace-nowrap">
+            Whitelist / Ignore <span id="badge-whitelist" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-500/15 text-slate-600 dark:text-slate-300">0</span>
+          </button>
+        </div>
+
+        <!-- Search & Sort Controls -->
+        <div class="p-4 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div class="relative flex-1 max-w-md">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="trackerSearchInput" oninput="resetTrackerPageAndRender()" placeholder="Cari username instan..." class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label for="trackerSortSelect" class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Urutkan:</label>
+            <select id="trackerSortSelect" onchange="resetTrackerPageAndRender()" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500">
+              <option value="newest">Terbaru Di-follow</option>
+              <option value="oldest">Terlama Di-follow</option>
+              <option value="az">Username A - Z</option>
+              <option value="za">Username Z - A</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Deskripsi Konteks Kategori -->
+        <div id="trackerCategoryHint" class="px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/80">
+          Menampilkan akun yang berhenti mengikuti kamu sejak pengecekan pembanding.
+        </div>
+
+        <!-- Daftar Akun -->
+        <div id="trackerAccountList" class="divide-y divide-slate-100 dark:divide-slate-800/80">
+          <!-- Diisi via JavaScript -->
+        </div>
+
+        <!-- Pagination / Load More -->
+        <div id="trackerLoadMoreWrap" class="hidden p-4 text-center border-t border-slate-100 dark:border-slate-800">
+          <button onclick="loadMoreTrackerItems()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">
+            Tampilkan Lebih Banyak
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: ORGANIC CLEANUP & GROWTH (100% AMAN TANPA BOT)        -->
+    <!-- ============================================================ -->
+    <section id="tab-cleanup" class="tab-panel hidden space-y-6">
+      <!-- Banner Prinsip Keamanan -->
+      <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div class="text-xs sm:text-sm">
+          <p class="font-bold text-emerald-800 dark:text-emerald-300">Mode Pertumbuhan Organik & Pembersihan Manual Terukur</p>
+          <p class="text-emerald-700/90 dark:text-emerald-400/90 mt-0.5">
+            Tidak ada skrip otomatis atau bot yang menyentuh akunmu. Gunakan antrean pacing harian untuk unfollow manual secara bertahap agar bebas dari <em>Action Blocked</em>, serta bangun interaksi organik pada akun prioritas.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Kolom Kiri: Smart Unfollow Pacing Queue (7 cols) -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+          <div class="p-5 border-b border-slate-200 dark:border-slate-800 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 class="text-base font-bold">Smart Unfollow Pacing Queue</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Diurutkan otomatis dari akun <strong>Not Following Back</strong> yang paling lama di-follow (non-whitelist).</p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <label class="text-xs text-slate-500">Batas Aman/Hari:</label>
+                <select id="dailyLimitSelect" onchange="updateDailyQuotaLimit(this.value)" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold">
+                  <option value="5">5 akun</option>
+                  <option value="10">10 akun</option>
+                  <option value="15" selected>15 akun (Ideal)</option>
+                  <option value="20">20 akun</option>
+                  <option value="25">25 akun</option>
+                  <option value="30">30 akun (Maks)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Daily Safe Quota Progress Bar -->
+            <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/70">
+              <div class="flex items-center justify-between text-xs font-semibold mb-1.5">
+                <span>Kuota Unfollow Manual Hari Ini (<span id="quotaTodayDateLabel">-</span>)</span>
+                <span id="quotaCounterText" class="text-pink-600 dark:text-pink-400">0 / 15 akun</span>
+              </div>
+              <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div id="quotaProgressBar" class="h-full ig-gradient rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <p id="quotaWarningMsg" class="hidden text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-2">
+                ⚠️ Batas aman harian tercapai! Disarankan berhenti sejenak dan lanjutkan besok agar akun tetap aman.
+              </p>
+            </div>
+          </div>
+
+          <!-- Daftar Antrean Pacing -->
+          <div id="cleanupQueueList" class="divide-y divide-slate-100 dark:divide-slate-800 max-h-[540px] overflow-y-auto">
+            <!-- Diisi via JS -->
+          </div>
+        </div>
+
+        <!-- Kolom Kanan: Priority Engagement List (5 cols) -->
+        <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+          <div class="p-5 border-b border-slate-200 dark:border-slate-800">
+            <h2 class="text-base font-bold">Priority Engagement List</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Daftar akun teman dekat, kreator, atau kolaborator untuk rutin diajak interaksi manual (like/komentar) agar algoritma lebih sehat.
+            </p>
+
+            <!-- Form Tambah Akun Prioritas -->
+            <form onsubmit="addEngagementAccount(event)" class="mt-4 space-y-2.5">
+              <div class="flex gap-2">
+                <input type="text" id="engUsernameInput" placeholder="Username (tanpa @)" required class="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-500" />
+                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white ig-gradient hover:opacity-95 transition shrink-0">
+                  + Tambah
+                </button>
+              </div>
+              <input type="text" id="engNoteInput" placeholder="Catatan (misal: Kreator desain, balas story rutin)" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-500" />
+            </form>
+          </div>
+
+          <!-- Daftar Akun Engagement -->
+          <div id="engagementListContainer" class="divide-y divide-slate-100 dark:divide-slate-800 flex-1 max-h-[460px] overflow-y-auto">
+            <!-- Diisi via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: POST SCHEDULER (SISTEM PENJADWALAN POSTING)            -->
+    <!-- ============================================================ -->
+    <section id="tab-scheduler" class="tab-panel hidden space-y-6">
+      <!-- Banner Info Keamanan Scheduler -->
+      <div class="p-4 rounded-2xl ig-gradient-soft border border-pink-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-xl ig-gradient text-white flex items-center justify-center shrink-0 mt-0.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div class="text-xs sm:text-sm">
+            <p class="font-bold text-slate-800 dark:text-slate-100">Content Planner, Caption Studio & Pengingat Kalender Lokal</p>
+            <p class="text-slate-600 dark:text-slate-300 mt-0.5">
+              Rencanakan ide, caption, hashtag, dan checklist pra-posting tanpa login akun. Unduh file pengingat <strong>(.ics)</strong> untuk menyinkronkan jadwal tayang langsung ke alarm Google Calendar / Apple Calendar HP kamu.
+            </p>
+          </div>
+        </div>
+        <button onclick="openPostModal()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-white ig-gradient shadow-md hover:opacity-95 transition whitespace-nowrap shrink-0 self-start sm:self-center">
+          + Buat Jadwal Baru
+        </button>
+      </div>
+
+      <!-- Toolbar View Switcher & Filter -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <!-- View Switcher: Daftar vs Kalender -->
+        <div class="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 self-start">
+          <button onclick="setSchedulerView('list')" id="viewListBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">
+            Tampilan Daftar Antrean
+          </button>
+          <button onclick="setSchedulerView('calendar')" id="viewCalendarBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">
+            Tampilan Kalender Bulanan
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="postStatusFilter" onchange="renderScheduler()" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium">
+            <option value="ALL">Semua Status</option>
+            <option value="Ide">Ide</option>
+            <option value="Draft">Draft</option>
+            <option value="Siap Posting">Siap Posting</option>
+            <option value="Sudah Tayang">Sudah Tayang</option>
+          </select>
+
+          <select id="postFormatFilter" onchange="renderScheduler()" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium">
+            <option value="ALL">Semua Format</option>
+            <option value="Feed">Feed (Single/Carousel)</option>
+            <option value="Reels">Reels</option>
+            <option value="Story">Story</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Container Tampilan Daftar Antrean -->
+      <div id="schedulerListView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Diisi via JS -->
+      </div>
+
+      <!-- Container Tampilan Kalender Bulanan -->
+      <div id="schedulerCalendarView" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <button onclick="changeCalendarMonth(-1)" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Bulan Sebelumnya">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <h3 id="calendarMonthTitle" class="text-sm sm:text-base font-bold">November 2026</h3>
+          <button onclick="changeCalendarMonth(1)" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Bulan Berikutnya">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+        <!-- Header Hari -->
+        <div class="grid grid-cols-7 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-center text-[11px] font-bold text-slate-500 py-2">
+          <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
+        </div>
+        <!-- Grid Tanggal -->
+        <div id="calendarGrid" class="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800">
+          <!-- Diisi via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: PANDUAN & BACKUP                                      -->
+    <!-- ============================================================ -->
+    <section id="tab-guide" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Panduan Unduh JSON Resmi Instagram (7 cols) -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-5">
+          <div>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ig-gradient text-white">Panduan Resmi 100% Aman</span>
+            <h2 class="text-lg font-extrabold mt-2">Cara Mengunduh File JSON Followers & Following dari Instagram</h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Ikuti langkah berikut melalui aplikasi Instagram di HP atau browser web. Meta biasanya memproses permintaan dalam 5–15 menit.
+            </p>
+          </div>
+
+          <ol class="space-y-4">
+            <li class="flex gap-3.5">
+              <span class="w-7 h-7 rounded-full ig-gradient text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+              <div class="text-xs sm:text-sm">
+                <p class="font-bold">Buka Pengaturan & Accounts Center</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-0.5">Buka profil Instagram → ketuk ikon garis tiga (Menu) di kanan atas → pilih <strong>Settings and privacy</strong> → masuk ke <strong>Accounts Center</strong>.</p>
+              </div>
+            </li>
+
+            <li class="flex gap-3.5">
+              <span class="w-7 h-7 rounded-full ig-gradient text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+              <div class="text-xs sm:text-sm">
+                <p class="font-bold">Pilih Download Your Information</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-0.5">Pilih menu <strong>Your information and permissions</strong> → ketuk <strong>Download your information</strong> → pilih <strong>Download or transfer information</strong>.</p>
+              </div>
+            </li>
+
+            <li class="flex gap-3.5">
+              <span class="w-7 h-7 rounded-full ig-gradient text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
+              <div class="text-xs sm:text-sm">
+                <p class="font-bold">Pilih Akun & "Some of your information"</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-0.5">Centang akun Instagram pribadimu → pilih <strong>Some of your information</strong> → gulir ke bagian <em>Connections</em> dan centang hanya <strong>Followers and following</strong> (agar file cepat selesai diproses).</p>
+              </div>
+            </li>
+
+            <li class="flex gap-3.5">
+              <span class="w-7 h-7 rounded-full ig-gradient text-white text-xs font-bold flex items-center justify-center shrink-0">4</span>
+              <div class="text-xs sm:text-sm">
+                <p class="font-bold">Wajib Pilih Format JSON & Rentang "All time"</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-0.5">Pilih <strong>Download to device</strong> → atur <em>Date range</em> menjadi <strong>All time</strong> → ubah <em>Format</em> dari HTML menjadi <strong class="text-pink-600 dark:text-pink-400">JSON</strong> → ketuk <strong>Create files</strong>.</p>
+              </div>
+            </li>
+
+            <li class="flex gap-3.5">
+              <span class="w-7 h-7 rounded-full ig-gradient text-white text-xs font-bold flex items-center justify-center shrink-0">5</span>
+              <div class="text-xs sm:text-sm">
+                <p class="font-bold">Unduh ZIP & Unggah ke IG SafePulse</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-0.5">Setelah mendapat notifikasi/email dari Meta, unduh file <code>.zip</code> tersebut lalu langsung drag & drop ke tab <strong>Dashboard & Tracker</strong> di aplikasi ini.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Export CSV & Backup/Restore Database (5 cols) -->
+        <div class="lg:col-span-5 space-y-5">
+          <!-- Export Laporan CSV -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3">
+            <h3 class="text-base font-bold flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Export Laporan Analisis (.CSV)</span>
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Unduh seluruh daftar Followers, Following, Mutuals, Not Following Back, dan New Unfollowers ke format CSV yang rapi dibuka di Microsoft Excel atau Google Sheets.
+            </p>
+            <button onclick="exportAnalysisCSV()" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm">
+              Download Laporan Excel (.CSV)
+            </button>
+          </div>
+
+          <!-- Backup & Restore Database Lokal -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
+            <div>
+              <h3 class="text-base font-bold flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                </svg>
+                <span>Backup & Restore Database Lokal</span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Simpan cadangan seluruh riwayat Snapshot, Whitelist, Log Cleanup, dan Jadwal Posting agar tidak hilang saat membersihkan cache browser atau pindah perangkat.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button onclick="backupDatabaseJSON()" class="py-2.5 px-3 rounded-xl text-xs font-bold ig-gradient text-white hover:opacity-95 transition shadow-sm">
+                Backup Data (.JSON)
+              </button>
+              <label class="py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-center cursor-pointer transition">
+                <span>Restore Backup (.JSON)</span>
+                <input type="file" accept=".json" onchange="restoreDatabaseJSON(event)" class="hidden" />
+              </label>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span class="text-[11px] text-slate-400">Penyimpanan lokal browser (localStorage)</span>
+              <button onclick="confirmResetAllData()" class="text-xs font-semibold text-rose-500 hover:text-rose-600">
+                Reset Semua Data
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL BUAT / EDIT JADWAL POSTING ==================== -->
+  <div id="postEditorModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-3xl w-full shadow-2xl overflow-hidden my-auto">
+      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <h3 id="postModalTitle" class="text-base font-extrabold">Buat Jadwal Posting Baru</h3>
+        <button onclick="closePostModal()" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <form onsubmit="savePostSchedule(event)" class="p-6 space-y-5 max-h-[82vh] overflow-y-auto">
+        <input type="hidden" id="postEditId" />
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+          <!-- Kolom Form Utama (7 cols) -->
+          <div class="md:col-span-7 space-y-4">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Judul / Ide Konten *</label>
+              <input type="text" id="postTitleInput" required placeholder="Contoh: 5 Tips Produktif Kerja Remote" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1">Format Konten</label>
+                <select id="postFormatInput" onchange="updateMediaPreviewAspect()" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium">
+                  <option value="Feed">Feed (Single/Carousel)</option>
+                  <option value="Reels">Reels</option>
+                  <option value="Story">Story</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Status</label>
+                <select id="postStatusInput" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium">
+                  <option value="Ide">Ide</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Siap Posting">Siap Posting</option>
+                  <option value="Sudah Tayang">Sudah Tayang</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold mb-1">Tanggal & Jam Tayang *</label>
+              <input type="datetime-local" id="postDatetimeInput" required class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
+            </div>
+
+            <!-- Caption Editor -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold">Caption & Hashtag</label>
+                <div class="flex items-center gap-2">
+                  <span id="captionCharCounter" class="text-[11px] font-medium text-slate-400">0 / 2.200</span>
+                  <button type="button" onclick="copyModalCaption()" class="text-[11px] font-semibold text-pink-600 dark:text-pink-400 hover:underline">
+                    Salin Caption
+                  </button>
+                </div>
+              </div>
+              <textarea id="postCaptionInput" rows="5" maxlength="2200" oninput="updateCaptionCharCount()" placeholder="Tulis hook yang menarik di baris pertama, isi konten, dan Call-to-Action..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
+            </div>
+
+            <!-- Hashtag Preset Manager -->
+            <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/70 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold">Hashtag Preset (1-Klik Sisipkan)</span>
+                <button type="button" onclick="toggleNewHashtagForm()" class="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline">
+                  + Preset Baru
+                </button>
+              </div>
+
+              <!-- Form Tambah Preset Hashtag -->
+              <div id="newHashtagForm" class="hidden space-y-2 pt-1">
+                <input type="text" id="newPresetName" placeholder="Nama grup (misal: TechTips)" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs" />
+                <input type="text" id="newPresetTags" placeholder="#techtips #produktivitas #indonesia" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs" />
+                <button type="button" onclick="saveNewHashtagPreset()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-purple-600 text-white">Simpan Preset</button>
+              </div>
+
+              <div id="hashtagPresetPills" class="flex flex-wrap gap-1.5">
+                <!-- Diisi via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Kolom Preview Media & Checklist Pra-Posting (5 cols) -->
+          <div class="md:col-span-5 space-y-4">
+            <!-- Preview Media Lokal -->
+            <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold">Pratinjau Visual (Opsional)</span>
+                <label class="text-[11px] font-semibold text-pink-600 dark:text-pink-400 cursor-pointer hover:underline">
+                  Pilih Gambar
+                  <input type="file" id="postMediaInput" accept="image/*" onchange="handlePostMediaPreview(event)" class="hidden" />
+                </label>
+              </div>
+              <div id="mediaPreviewBox" class="w-full aspect-[4/5] max-h-56 mx-auto rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-center p-3 overflow-hidden relative">
+                <img id="mediaPreviewImg" src="" alt="Preview Media" class="hidden w-full h-full object-cover rounded-lg" />
+                <div id="mediaPreviewPlaceholder" class="text-xs text-slate-400 space-y-1">
+                  <svg class="w-7 h-7 mx-auto opacity-60" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  <p>Belum ada gambar dipilih</p>
+                  <p class="text-[10px]">Pratinjau lokal (tidak diunggah ke server)</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Checklist Pra-Posting -->
+            <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-2.5">
+              <span class="block text-xs font-bold">Checklist Pra-Posting</span>
+              <label class="flex items-center gap-2.5 text-xs cursor-pointer">
+                <input type="checkbox" id="chkCover" class="rounded text-pink-500 focus:ring-pink-500" />
+                <span>Cover / Thumbnail sudah siap & rapi</span>
+              </label>
+              <label class="flex items-center gap-2.5 text-xs cursor-pointer">
+                <input type="checkbox" id="chkHook" class="rounded text-pink-500 focus:ring-pink-500" />
+                <span>Hook 3 detik awal / baris pertama kuat</span>
+              </label>
+              <label class="flex items-center gap-2.5 text-xs cursor-pointer">
+                <input type="checkbox" id="chkCta" class="rounded text-pink-500 focus:ring-pink-500" />
+                <span>Call-to-Action (CTA) jelas</span>
+              </label>
+              <label class="flex items-center gap-2.5 text-xs cursor-pointer">
+                <input type="checkbox" id="chkLocationAlt" class="rounded text-pink-500 focus:ring-pink-500" />
+                <span>Lokasi & Alt Text sudah disiapkan</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="closePostModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">
+            Batal
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold text-white ig-gradient shadow-md hover:opacity-95 transition">
+            Simpan Jadwal Posting
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== CUSTOM CONFIRMATION MODAL ==================== -->
+  <div id="confirmModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+      <h3 id="confirmModalTitle" class="text-base font-extrabold">Konfirmasi Tindakan</h3>
+      <p id="confirmModalMessage" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">Apakah kamu yakin ingin melanjutkan?</p>
+      <div class="flex items-center justify-end gap-2.5 pt-2">
+        <button onclick="closeConfirmModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">
+          Batal
+        </button>
+        <button id="confirmModalActionBtn" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition">
+          Ya, Lanjutkan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION ==================== -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    /**
+     * IG SafePulse — Personal Tracker & Post Scheduler
+     * Seluruh pemrosesan JSON/ZIP, analitik snapshot, pacing cleanup,
+     * dan penjadwalan posting berjalan 100% lokal di browser (localStorage).
+     */
+
+    const STORAGE_KEY = 'ig_safepulse_db_v1';
+
+    // State aplikasi utama
+    let appState = {
+      theme: 'light',
+      activeTab: 'tracker',
+      snapshots: [],
+      selectedBaseSnapId: null,
+      selectedCompareSnapId: null,
+      whitelist: [],
+      cleanupSettings: {
+        dailyLimit: 15,
+        todayDate: getTodayStr(),
+        completedToday: [],
+        allTimeCleaned: []
+      },
+      engagementList: [],
+      posts: [],
+      hashtagPresets: [
+        { id: 'preset_1', name: 'Daily & Lifestyle', tags: '#dailyvlog #keseharian #indonesia #kontenkreator #lifestyle' },
+        { id: 'preset_2', name: 'Tips & Edukasi', tags: '#tipsinstagram #belajardigital #produktivitas #edukasi #sharingiscaring' }
+      ]
+    };
+
+    // State sementara untuk UI (tidak disimpan ke localStorage)
+    let activeTrackerFilter = 'new_unfollowers';
+    let trackerVisibleCount = 30;
+    let schedulerViewMode = 'list'; // 'list' | 'calendar'
+    let currentCalendarDate = new Date();
+    let stagedUpload = { followers: null, following: null };
+    let activeMediaObjectUrl = null;
+    let pendingConfirmCallback = null;
+
+    // ==================== HELPER UTILITIES ====================
+
+    function getTodayStr() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function formatIndonesianDate(unixSeconds) {
+      if (!unixSeconds) return 'Tanggal tidak tercatat';
+      const date = new Date(unixSeconds * 1000);
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    function formatIndonesianDateTime(isoString) {
+      if (!isoString) return '-';
+      const date = new Date(isoString);
+      return date.toLocaleDateString('id-ID', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function daysAgoText(unixSeconds) {
+      if (!unixSeconds) return '';
+      const diffMs = Date.now() - (unixSeconds * 1000);
+      const days = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      if (days === 0) return 'Hari ini';
+      if (days === 1) return '1 hari lalu';
+      return `${days} hari lalu`;
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-slate-900 dark:bg-slate-800 text-white border-emerald-500/40',
+        error: 'bg-rose-600 text-white border-rose-400/40',
+        info: 'bg-slate-900 dark:bg-slate-800 text-white border-pink-500/40'
+      };
+      const icon = type === 'error' ? '⚠️' : type === 'info' ? '✨' : '✅';
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs font-semibold flex items-center gap-2.5 transform transition-all duration-300 translate-y-2 opacity-0 ${colors[type] || colors.success}`;
+      toast.innerHTML = `<span>${icon}</span><span class="flex-1">${escapeHTML(message)}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function openConfirmModal(title, message, onConfirm) {
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalMessage').textContent = message;
+      pendingConfirmCallback = onConfirm;
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirmModal').classList.add('hidden');
+      pendingConfirmCallback = null;
+    }
+
+    document.getElementById('confirmModalActionBtn').addEventListener('click', () => {
+      if (typeof pendingConfirmCallback === 'function') {
+        pendingConfirmCallback();
+      }
+      closeConfirmModal();
+    });
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Salin teks ke clipboard menggunakan document.execCommand('copy') agar kompatibel dengan iframe
+    function copyTextToClipboard(text, successMsg = 'Berhasil disalin ke clipboard!') {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg, 'success');
+      } catch (err) {
+        showToast('Gagal menyalin teks otomatis.', 'error');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // ==================== PERSISTENCE (LOCALSTORAGE) ====================
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        showToast('Penyimpanan browser penuh. Hapus snapshot lama jika diperlukan.', 'error');
+      }
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          appState = {
+            ...appState,
+            ...parsed,
+            cleanupSettings: {
+              ...appState.cleanupSettings,
+              ...(parsed.cleanupSettings || {})
+            }
+          };
+        }
+      } catch (e) {
+        console.error('Gagal memuat state lokal:', e);
+      }
+
+      // Reset kuota harian jika tanggal hari ini sudah berganti
+      const today = getTodayStr();
+      if (appState.cleanupSettings.todayDate !== today) {
+        appState.cleanupSettings.todayDate = today;
+        appState.cleanupSettings.completedToday = [];
+        saveState();
+      }
+    }
+
+    // ==================== THEME & NAVIGATION ====================
+
+    function applyTheme() {
+      const html = document.documentElement;
+      if (appState.theme === 'dark') {
+        html.classList.add('dark');
+      } else {
+        html.classList.remove('dark');
+      }
+    }
+
+    function toggleTheme() {
+      appState.theme = appState.theme === 'dark' ? 'light' : 'dark';
+      applyTheme();
+      saveState();
+    }
+
+    function switchMainTab(tabName) {
+      appState.activeTab = tabName;
+      saveState();
+
+      // Update tampilan panel
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.add('hidden');
+      });
+      const activePanel = document.getElementById(`tab-${tabName}`);
+      if (activePanel) activePanel.classList.remove('hidden');
+
+      // Update styling tombol navigasi
+      document.querySelectorAll('.main-tab-btn').forEach(btn => {
+        const isCurrent = btn.dataset.mainTab === tabName;
+        if (isCurrent) {
+          btn.className = 'main-tab-btn px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition flex items-center gap-2 ig-gradient text-white shadow-sm';
+        } else {
+          btn.className = 'main-tab-btn px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800';
+        }
+      });
+
+      if (tabName === 'tracker') renderTrackerDashboard();
+      if (tabName === 'cleanup') renderCleanupTab();
+      if (tabName === 'scheduler') renderScheduler();
+    }
+
+    // ==================== INSTAGRAM JSON & ZIP PARSER ====================
+
+    function extractUsernameFromHref(href) {
+      if (!href) return '';
+      try {
+        const clean = href.replace(/\/+$/, '');
+        const parts = clean.split('/');
+        return parts[parts.length - 1].toLowerCase().trim();
+      } catch (e) {
+        return '';
+      }
+    }
+
+    /**
+     * Mem-parsing isi JSON dari file followers_1.json / following.json resmi Meta.
+     * Mendukung format array langsung, object relationships_following / relationships_followers,
+     * serta pengambilan username dari string_list_data[0].value maupun fallback field title/href.
+     */
+    function parseInstagramJsonContent(jsonData) {
+      let rawList = [];
+
+      if (Array.isArray(jsonData)) {
+        rawList = jsonData;
+      } else if (jsonData && typeof jsonData === 'object') {
+        if (Array.isArray(jsonData.relationships_following)) {
+          rawList = jsonData.relationships_following;
+        } else if (Array.isArray(jsonData.relationships_followers)) {
+          rawList = jsonData.relationships_followers;
+        } else {
+          // Cari properti pertama yang berupa array
+          const firstArrayKey = Object.keys(jsonData).find(k => Array.isArray(jsonData[k]));
+          if (firstArrayKey) rawList = jsonData[firstArrayKey];
+        }
+      }
+
+      const accountsMap = new Map();
+
+      rawList.forEach(item => {
+        const sld = Array.isArray(item.string_list_data) && item.string_list_data.length > 0
+          ? item.string_list_data[0]
+          : {};
+
+        const rawUsername = sld.value || item.title || extractUsernameFromHref(sld.href);
+        if (!rawUsername) return;
+
+        const username = rawUsername.toLowerCase().trim();
+        const href = sld.href || `https://www.instagram.com/${username}`;
+        const timestamp = sld.timestamp ? Number(sld.timestamp) : null;
+
+        if (!accountsMap.has(username)) {
+          accountsMap.set(username, { username, href, timestamp });
+        }
+      });
+
+      return Array.from(accountsMap.values());
+    }
+
+    // Setup Drag & Drop & File Input
+    const dropZone = document.getElementById('dropZone');
+    const igFileInput = document.getElementById('igFileInput');
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-pink-500', 'scale-[1.01]');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-pink-500', 'scale-[1.01]');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-pink-500', 'scale-[1.01]');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleUploadedFiles(e.dataTransfer.files);
+      }
+    });
+
+    igFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleUploadedFiles(e.target.files);
+        e.target.value = '';
+      }
+    });
+
+    async function handleUploadedFiles(fileList) {
+      const files = Array.from(fileList);
+      let collectedFollowers = [];
+      let collectedFollowing = [];
+      let foundFollowersFile = false;
+      let foundFollowingFile = false;
+
+      try {
+        for (const file of files) {
+          const lowerName = file.name.toLowerCase();
+
+          // 1. Jika file berupa .ZIP resmi dari Meta
+          if (lowerName.endsWith('.zip')) {
+            showToast('Mengekstrak arsip ZIP Instagram...', 'info');
+            const zip = await JSZip.loadAsync(file);
+
+            for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+              if (zipEntry.dir) continue;
+              const pathLower = relativePath.toLowerCase();
+
+              // Cocokkan file followers_1.json, followers_2.json, dst.
+              if (/(^|\/)followers(_\d+)?\.json$/i.test(pathLower)) {
+                const text = await zipEntry.async('string');
+                const parsed = parseInstagramJsonContent(JSON.parse(text));
+                collectedFollowers = mergeAccountArrays(collectedFollowers, parsed);
+                foundFollowersFile = true;
+              }
+              // Cocokkan file following.json
+              else if (/(^|\/)following(_\d+)?\.json$/i.test(pathLower)) {
+                const text = await zipEntry.async('string');
+                const parsed = parseInstagramJsonContent(JSON.parse(text));
+                collectedFollowing = mergeAccountArrays(collectedFollowing, parsed);
+                foundFollowingFile = true;
+              }
+            }
+          }
+          // 2. Jika file berupa .JSON satuan / multi-file
+          else if (lowerName.endsWith('.json')) {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            const parsed = parseInstagramJsonContent(json);
+
+            if (lowerName.includes('follower') && !lowerName.includes('following')) {
+              collectedFollowers = mergeAccountArrays(collectedFollowers, parsed);
+              foundFollowersFile = true;
+            } else if (lowerName.includes('following')) {
+              collectedFollowing = mergeAccountArrays(collectedFollowing, parsed);
+              foundFollowingFile = true;
+            } else if (json && json.relationships_following) {
+              collectedFollowing = mergeAccountArrays(collectedFollowing, parsed);
+              foundFollowingFile = true;
+            } else {
+              collectedFollowers = mergeAccountArrays(collectedFollowers, parsed);
+              foundFollowersFile = true;
+            }
+          }
+        }
+
+        // Gabungkan dengan staging jika ada
+        if (foundFollowersFile) {
+          stagedUpload.followers = mergeAccountArrays(stagedUpload.followers || [], collectedFollowers);
+        }
+        if (foundFollowingFile) {
+          stagedUpload.following = mergeAccountArrays(stagedUpload.following || [], collectedFollowing);
+        }
+
+        // Jika keduanya sudah lengkap, langsung simpan sebagai snapshot baru!
+        if (stagedUpload.followers && stagedUpload.following) {
+          createNewSnapshot(stagedUpload.followers, stagedUpload.following);
+          clearStaging();
+        } else if (stagedUpload.followers || stagedUpload.following) {
+          updateStagingUI();
+          showToast('File terbaca! Unggah pasangan JSON satunya untuk melengkapi.', 'info');
+        } else {
+          showToast('Tidak ditemukan file followers/following JSON yang valid.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Gagal membaca file. Pastikan format file adalah ZIP atau JSON resmi Instagram.', 'error');
+      }
+    }
+
+    function mergeAccountArrays(arrA, arrB) {
+      const map = new Map();
+      [...arrA, ...arrB].forEach(acc => {
+        if (acc && acc.username) map.set(acc.username, acc);
+      });
+      return Array.from(map.values());
+    }
+
+    function updateStagingUI() {
+      const banner = document.getElementById('stagingBanner');
+      if (!stagedUpload.followers && !stagedUpload.following) {
+        banner.classList.add('hidden');
+        return;
+      }
+      banner.classList.remove('hidden');
+      document.getElementById('stageFollowersStatus').textContent = stagedUpload.followers
+        ? `Followers: ${stagedUpload.followers.length} akun ✓`
+        : 'Followers: Menunggu file followers_1.json';
+      document.getElementById('stageFollowingStatus').textContent = stagedUpload.following
+        ? `Following: ${stagedUpload.following.length} akun ✓`
+        : 'Following: Menunggu file following.json';
+    }
+
+    function commitStagedFiles() {
+      if (!stagedUpload.followers && !stagedUpload.following) return;
+      createNewSnapshot(stagedUpload.followers || [], stagedUpload.following || []);
+      clearStaging();
+    }
+
+    function clearStaging() {
+      stagedUpload = { followers: null, following: null };
+      updateStagingUI();
+    }
+
+    function createNewSnapshot(followers, following, customLabel = null, customTimestamp = null) {
+      const now = customTimestamp || Date.now();
+      const label = customLabel || new Date(now).toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      const snapId = 'snap_' + now + '_' + Math.random().toString(36).slice(2, 6);
+      const previousLatestId = appState.snapshots.length > 0 ? appState.snapshots[0].id : null;
+
+      appState.snapshots.unshift({
+        id: snapId,
+        label,
+        timestamp: now,
+        followers,
+        following
+      });
+
+      appState.selectedBaseSnapId = snapId;
+      appState.selectedCompareSnapId = previousLatestId;
+
+      saveState();
+      renderTrackerDashboard();
+      renderCleanupTab();
+      showToast(`Snapshot disimpan (${followers.length} Followers, ${following.length} Following)!`, 'success');
+    }
+
+    // ==================== ANALISIS & RENDER TRACKER ====================
+
+    function getComputedAnalytics() {
+      const baseSnap = appState.snapshots.find(s => s.id === appState.selectedBaseSnapId) || appState.snapshots[0] || null;
+      const compareSnap = appState.snapshots.find(s => s.id === appState.selectedCompareSnapId) || null;
+
+      if (!baseSnap) {
+        return {
+          baseSnap: null,
+          compareSnap: null,
+          followers: [],
+          following: [],
+          mutuals: [],
+          notFollowingBack: [],
+          fans: [],
+          newUnfollowers: [],
+          newFollowers: [],
+          whitelistedAccounts: []
+        };
+      }
+
+      const whitelistSet = new Set(appState.whitelist.map(u => u.toLowerCase()));
+      const followersMap = new Map(baseSnap.followers.map(a => [a.username, a]));
+      const followingMap = new Map(baseSnap.following.map(a => [a.username, a]));
+
+      const mutuals = [];
+      const notFollowingBack = [];
+      const fans = [];
+      const whitelistedAccounts = [];
+
+      baseSnap.following.forEach(acc => {
+        if (followersMap.has(acc.username)) {
+          mutuals.push(acc);
+        } else {
+          if (whitelistSet.has(acc.username)) {
+            whitelistedAccounts.push(acc);
+          } else {
+            notFollowingBack.push(acc);
+          }
+        }
+      });
+
+      baseSnap.followers.forEach(acc => {
+        if (!followingMap.has(acc.username)) {
+          fans.push(acc);
+        }
+      });
+
+      // Juga masukkan akun whitelist yang mungkin sudah di-unfollow atau masih ada
+      appState.whitelist.forEach(u => {
+        if (!whitelistedAccounts.some(a => a.username === u)) {
+          const existing = followingMap.get(u) || followersMap.get(u) || {
+            username: u,
+            href: `https://www.instagram.com/${u}`,
+            timestamp: null
+          };
+          whitelistedAccounts.push(existing);
+        }
+      });
+
+      // Bandingkan dengan Snapshot Sebelumnya (New Unfollowers & New Followers)
+      let newUnfollowers = [];
+      let newFollowers = [];
+
+      if (compareSnap && compareSnap.id !== baseSnap.id) {
+        const prevFollowersMap = new Map(compareSnap.followers.map(a => [a.username, a]));
+
+        // Dulu ada di followers, sekarang hilang di baseSnap.followers
+        compareSnap.followers.forEach(prevAcc => {
+          if (!followersMap.has(prevAcc.username)) {
+            // Cek apakah kita masih mem-follow dia untuk mengambil timestamp follow
+            const followingInfo = followingMap.get(prevAcc.username);
+            newUnfollowers.push({
+              ...prevAcc,
+              timestamp: followingInfo ? followingInfo.timestamp : prevAcc.timestamp
+            });
+          }
+        });
+
+        // Sekarang ada di baseSnap.followers, dulu belum ada
+        baseSnap.followers.forEach(currAcc => {
+          if (!prevFollowersMap.has(currAcc.username)) {
+            newFollowers.push(currAcc);
+          }
+        });
+      }
+
+      return {
+        baseSnap,
+        compareSnap,
+        followers: baseSnap.followers,
+        following: baseSnap.following,
+        mutuals,
+        notFollowingBack,
+        fans,
+        newUnfollowers,
+        newFollowers,
+        whitelistedAccounts
+      };
+    }
+
+    function handleSnapshotSelectChange() {
+      appState.selectedBaseSnapId = document.getElementById('baseSnapSelect').value || null;
+      appState.selectedCompareSnapId = document.getElementById('compareSnapSelect').value || null;
+      saveState();
+      renderTrackerDashboard();
+      renderCleanupTab();
+    }
+
+    function confirmDeleteCurrentSnapshot() {
+      if (!appState.selectedBaseSnapId) return;
+      openConfirmModal(
+        'Hapus Snapshot Ini?',
+        'Snapshot yang dihapus tidak dapat dikembalikan kecuali kamu memiliki file backup.',
+        () => {
+          appState.snapshots = appState.snapshots.filter(s => s.id !== appState.selectedBaseSnapId);
+          appState.selectedBaseSnapId = appState.snapshots[0] ? appState.snapshots[0].id : null;
+          appState.selectedCompareSnapId = appState.snapshots[1] ? appState.snapshots[1].id : null;
+          saveState();
+          renderTrackerDashboard();
+          renderCleanupTab();
+          showToast('Snapshot berhasil dihapus.', 'info');
+        }
+      );
+    }
+
+    function selectTrackerFilter(filterKey) {
+      activeTrackerFilter = filterKey;
+      trackerVisibleCount = 30;
+      renderTrackerDashboard();
+    }
+
+    function resetTrackerPageAndRender() {
+      trackerVisibleCount = 30;
+      renderTrackerDashboard();
+    }
+
+    function loadMoreTrackerItems() {
+      trackerVisibleCount += 30;
+      renderTrackerDashboard();
+    }
+
+    function toggleWhitelist(username) {
+      const clean = username.toLowerCase().trim();
+      const idx = appState.whitelist.indexOf(clean);
+      if (idx > -1) {
+        appState.whitelist.splice(idx, 1);
+        showToast(`@${clean} dihapus dari Whitelist.`, 'info');
+      } else {
+        appState.whitelist.push(clean);
+        showToast(`@${clean} ditambahkan ke Whitelist (diabaikan dari daftar unfollow).`, 'success');
+      }
+      saveState();
+      renderTrackerDashboard();
+      renderCleanupTab();
+    }
+
+    function renderTrackerDashboard() {
+      const data = getComputedAnalytics();
+
+      // Update dropdown snapshot
+      const baseSelect = document.getElementById('baseSnapSelect');
+      const compareSelect = document.getElementById('compareSnapSelect');
+      const deleteBtn = document.getElementById('deleteSnapBtn');
+      document.getElementById('snapshotCountBadge').textContent = `${appState.snapshots.length} Snapshot`;
+
+      if (appState.snapshots.length === 0) {
+        baseSelect.innerHTML = `<option value="">Belum ada data snapshot</option>`;
+        compareSelect.innerHTML = `<option value="">Tidak ada pembanding</option>`;
+        deleteBtn.classList.add('hidden');
+      } else {
+        deleteBtn.classList.remove('hidden');
+        baseSelect.innerHTML = appState.snapshots.map(s =>
+          `<option value="${s.id}" ${data.baseSnap && s.id === data.baseSnap.id ? 'selected' : ''}>${escapeHTML(s.label)} (${s.followers.length} Foll / ${s.following.length} Ing)</option>`
+        ).join('');
+
+        compareSelect.innerHTML = `<option value="">-- Tidak dibandingkan --</option>` + appState.snapshots.map(s =>
+          `<option value="${s.id}" ${data.compareSnap && s.id === data.compareSnap.id ? 'selected' : ''}>${escapeHTML(s.label)} (${s.followers.length} Foll)</option>`
+        ).join('');
+      }
+
+      // Update 6 Kartu Ringkasan Statistik
+      document.getElementById('statFollowers').textContent = data.followers.length.toLocaleString('id-ID');
+      document.getElementById('statFollowing').textContent = data.following.length.toLocaleString('id-ID');
+      document.getElementById('statMutuals').textContent = data.mutuals.length.toLocaleString('id-ID');
+      document.getElementById('statNotFollowingBack').textContent = data.notFollowingBack.length.toLocaleString('id-ID');
+      document.getElementById('statNewUnfollowers').textContent = data.newUnfollowers.length.toLocaleString('id-ID');
+      document.getElementById('statNewFollowers').textContent = data.newFollowers.length.toLocaleString('id-ID');
+
+      // Delta followers badge & rasio
+      const deltaBadge = document.getElementById('statFollowersDelta');
+      if (data.baseSnap && data.compareSnap && data.baseSnap.id !== data.compareSnap.id) {
+        const diff = data.followers.length - data.compareSnap.followers.length;
+        if (diff > 0) {
+          deltaBadge.textContent = `+${diff}`;
+          deltaBadge.className = 'text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
+        } else if (diff < 0) {
+          deltaBadge.textContent = `${diff}`;
+          deltaBadge.className = 'text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-400';
+        } else {
+          deltaBadge.textContent = '0';
+          deltaBadge.className = 'text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500';
+        }
+      } else {
+        deltaBadge.textContent = '-';
+        deltaBadge.className = 'text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500';
+      }
+
+      const ratioBadge = document.getElementById('statRatioBadge');
+      if (data.following.length > 0) {
+        const ratio = (data.followers.length / data.following.length).toFixed(2);
+        ratioBadge.textContent = `Rasio ${ratio}x`;
+      } else {
+        ratioBadge.textContent = 'Rasio -';
+      }
+
+      // Update badge jumlah pada sub-tab filter
+      document.getElementById('badge-new_unfollowers').textContent = data.newUnfollowers.length;
+      document.getElementById('badge-new_followers').textContent = data.newFollowers.length;
+      document.getElementById('badge-not_following_back').textContent = data.notFollowingBack.length;
+      document.getElementById('badge-fans').textContent = data.fans.length;
+      document.getElementById('badge-mutuals').textContent = data.mutuals.length;
+      document.getElementById('badge-whitelist').textContent = data.whitelistedAccounts.length;
+
+      // Update active styling sub-tab filter
+      document.querySelectorAll('.tracker-filter-btn').forEach(btn => {
+        const isCurrent = btn.dataset.filter === activeTrackerFilter;
+        if (isCurrent) {
+          btn.className = 'tracker-filter-btn px-3.5 py-2.5 text-xs font-bold rounded-t-xl border-b-2 border-pink-500 text-pink-600 dark:text-pink-400 bg-pink-500/5 transition whitespace-nowrap';
+        } else {
+          btn.className = 'tracker-filter-btn px-3.5 py-2.5 text-xs font-semibold rounded-t-xl border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition whitespace-nowrap';
+        }
+      });
+
+      // Hint deskripsi per kategori
+      const hints = {
+        new_unfollowers: 'Akun yang sebelumnya mem-follow kamu di snapshot pembanding, namun kini sudah berhenti follow.',
+        new_followers: 'Pengikut baru yang masuk sejak snapshot pembanding.',
+        not_following_back: 'Akun yang kamu follow tetapi tidak mem-follow balik (diluar daftar Whitelist).',
+        fans: 'Akun yang mem-follow kamu tetapi belum kamu follow balik.',
+        mutuals: 'Akun yang saling follow denganmu.',
+        whitelist: 'Akun brand, artis, atau publik figur yang kamu abaikan agar tidak muncul di daftar unfollow.'
+      };
+      document.getElementById('trackerCategoryHint').textContent = hints[activeTrackerFilter] || '';
+
+      // Pilih array sumber sesuai sub-tab
+      const listMap = {
+        new_unfollowers: data.newUnfollowers,
+        new_followers: data.newFollowers,
+        not_following_back: data.notFollowingBack,
+        fans: data.fans,
+        mutuals: data.mutuals,
+        whitelist: data.whitelistedAccounts
+      };
+      let items = [...(listMap[activeTrackerFilter] || [])];
+
+      // Filter pencarian instan
+      const query = document.getElementById('trackerSearchInput').value.toLowerCase().trim();
+      if (query) {
+        items = items.filter(a => a.username.includes(query));
+      }
+
+      // Pengurutan
+      const sortBy = document.getElementById('trackerSortSelect').value;
+      items.sort((a, b) => {
+        if (sortBy === 'newest') return (b.timestamp || 0) - (a.timestamp || 0);
+        if (sortBy === 'oldest') return (a.timestamp || 0) - (b.timestamp || 0);
+        if (sortBy === 'az') return a.username.localeCompare(b.username);
+        if (sortBy === 'za') return b.username.localeCompare(a.username);
+        return 0;
+      });
+
+      const listContainer = document.getElementById('trackerAccountList');
+      const loadMoreWrap = document.getElementById('trackerLoadMoreWrap');
+
+      if (!data.baseSnap) {
+        listContainer.innerHTML = `
+          <div class="p-10 text-center space-y-2">
+            <p class="text-sm font-bold text-slate-600 dark:text-slate-300">Belum Ada Data Instagram</p>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">Unggah file .ZIP / .JSON resmi Instagram di atas, atau klik tombol <strong>"Muat Data Demo"</strong> di pojok kanan atas untuk melihat simulasi analitik.</p>
+          </div>
+        `;
+        loadMoreWrap.classList.add('hidden');
+        return;
+      }
+
+      if (items.length === 0) {
+        const emptyMsg = activeTrackerFilter === 'new_unfollowers' && !data.compareSnap
+          ? 'Pilih snapshot pembanding di kanan atas (atau unggah data kedua kali) untuk mendeteksi siapa yang baru unfollow.'
+          : 'Tidak ada akun dalam kategori atau kata kunci pencarian ini.';
+        listContainer.innerHTML = `
+          <div class="p-8 text-center text-xs text-slate-400">
+            ${emptyMsg}
+          </div>
+        `;
+        loadMoreWrap.classList.add('hidden');
+        return;
+      }
+
+      const visibleItems = items.slice(0, trackerVisibleCount);
+      const whitelistSet = new Set(appState.whitelist);
+
+      listContainer.innerHTML = visibleItems.map(acc => {
+        const isWhitelisted = whitelistSet.has(acc.username);
+        const dateLabel = acc.timestamp
+          ? (activeTrackerFilter === 'fans' || activeTrackerFilter === 'new_followers'
+              ? `Follow kamu sejak ${formatIndonesianDate(acc.timestamp)}`
+              : `Di-follow sejak ${formatIndonesianDate(acc.timestamp)} (${daysAgoText(acc.timestamp)})`)
+          : 'Metadata tanggal tidak tersedia';
+
+        return `
+          <div class="p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-full ig-ring shrink-0">
+                <div class="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center font-extrabold text-xs uppercase text-pink-600 dark:text-pink-400">
+                  ${escapeHTML(acc.username.slice(0, 2))}
+                </div>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <a href="https://www.instagram.com/${encodeURIComponent(acc.username)}" target="_blank" rel="noopener noreferrer" class="text-sm font-bold hover:text-pink-600 dark:hover:text-pink-400 truncate">
+                    @${escapeHTML(acc.username)}
+                  </a>
+                  ${isWhitelisted ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400">Whitelist</span>' : ''}
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">${dateLabel}</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button onclick="toggleWhitelist('${escapeHTML(acc.username)}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+                isWhitelisted
+                  ? 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-300 hover:bg-purple-500/20'
+                  : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }">
+                ${isWhitelisted ? 'Hapus Whitelist' : 'Whitelist / Abaikan'}
+              </button>
+
+              <a href="https://www.instagram.com/${encodeURIComponent(acc.username)}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl text-xs font-semibold ig-gradient text-white shadow-sm hover:opacity-95 transition flex items-center gap-1">
+                <span>Buka Profil IG</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (items.length > trackerVisibleCount) {
+        loadMoreWrap.classList.remove('hidden');
+      } else {
+        loadMoreWrap.classList.add('hidden');
+      }
+    }
+
+    // ==================== TAB 2: ORGANIC CLEANUP & GROWTH ====================
+
+    function updateDailyQuotaLimit(val) {
+      appState.cleanupSettings.dailyLimit = Number(val) || 15;
+      saveState();
+      renderCleanupTab();
+    }
+
+    function markCleanupAccountDone(username) {
+      const clean = username.toLowerCase().trim();
+      const today = getTodayStr();
+      if (appState.cleanupSettings.todayDate !== today) {
+        appState.cleanupSettings.todayDate = today;
+        appState.cleanupSettings.completedToday = [];
+      }
+
+      if (!appState.cleanupSettings.completedToday.includes(clean)) {
+        appState.cleanupSettings.completedToday.push(clean);
+      }
+      if (!appState.cleanupSettings.allTimeCleaned.includes(clean)) {
+        appState.cleanupSettings.allTimeCleaned.push(clean);
+      }
+
+      saveState();
+      renderCleanupTab();
+      showToast(`@${clean} ditandai selesai di-unfollow manual.`, 'success');
+    }
+
+    function undoCleanupAccount(username) {
+      const clean = username.toLowerCase().trim();
+      appState.cleanupSettings.completedToday = appState.cleanupSettings.completedToday.filter(u => u !== clean);
+      appState.cleanupSettings.allTimeCleaned = appState.cleanupSettings.allTimeCleaned.filter(u => u !== clean);
+      saveState();
+      renderCleanupTab();
+      showToast(`Status @${clean} dikembalikan ke antrean.`, 'info');
+    }
+
+    function addEngagementAccount(e) {
+      e.preventDefault();
+      const rawUser = document.getElementById('engUsernameInput').value.replace(/^@+/, '').trim().toLowerCase();
+      const note = document.getElementById('engNoteInput').value.trim();
+      if (!rawUser) return;
+
+      if (appState.engagementList.some(item => item.username === rawUser)) {
+        showToast(`@${rawUser} sudah ada di Priority Engagement List.`, 'info');
+        return;
+      }
+
+      appState.engagementList.unshift({
+        id: 'eng_' + Date.now(),
+        username: rawUser,
+        note: note || 'Prioritas interaksi harian',
+        lastInteractedDate: null
+      });
+
+      document.getElementById('engUsernameInput').value = '';
+      document.getElementById('engNoteInput').value = '';
+      saveState();
+      renderCleanupTab();
+      showToast(`@${rawUser} ditambahkan ke daftar prioritas!`, 'success');
+    }
+
+    function toggleEngagementToday(id) {
+      const today = getTodayStr();
+      const item = appState.engagementList.find(i => i.id === id);
+      if (!item) return;
+      item.lastInteractedDate = item.lastInteractedDate === today ? null : today;
+      saveState();
+      renderCleanupTab();
+    }
+
+    function deleteEngagementAccount(id) {
+      appState.engagementList = appState.engagementList.filter(i => i.id !== id);
+      saveState();
+      renderCleanupTab();
+    }
+
+    function renderCleanupTab() {
+      const data = getComputedAnalytics();
+      const today = getTodayStr();
+      const limit = appState.cleanupSettings.dailyLimit || 15;
+      const doneTodayCount = appState.cleanupSettings.completedToday.length;
+
+      document.getElementById('dailyLimitSelect').value = String(limit);
+      document.getElementById('quotaTodayDateLabel').textContent = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+      document.getElementById('quotaCounterText').textContent = `${doneTodayCount} / ${limit} akun`;
+
+      const pct = Math.min(100, Math.round((doneTodayCount / limit) * 100));
+      document.getElementById('quotaProgressBar').style.width = `${pct}%`;
+
+      const warnMsg = document.getElementById('quotaWarningMsg');
+      if (doneTodayCount >= limit) {
+        warnMsg.classList.remove('hidden');
+      } else {
+        warnMsg.classList.add('hidden');
+      }
+
+      // Antrean Not Following Back (non-whitelist), diurutkan dari TERLAMA di-follow
+      const cleanedSet = new Set(appState.cleanupSettings.allTimeCleaned);
+      const queue = [...data.notFollowingBack]
+        .filter(acc => !cleanedSet.has(acc.username))
+        .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+      const queueContainer = document.getElementById('cleanupQueueList');
+
+      if (!data.baseSnap) {
+        queueContainer.innerHTML = `
+          <div class="p-8 text-center text-xs text-slate-400">
+            Unggah data Instagram di tab <strong>Dashboard & Tracker</strong> (atau muat Data Demo) untuk melihat antrean pembersihan aman.
+          </div>
+        `;
+      } else if (queue.length === 0) {
+        queueContainer.innerHTML = `
+          <div class="p-8 text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+            🎉 Semua akun Not Following Back (di luar Whitelist) sudah bersih!
+          </div>
+        `;
+      } else {
+        const displayQueue = queue.slice(0, 40);
+        queueContainer.innerHTML = displayQueue.map((acc, index) => {
+          const isQuotaReached = doneTodayCount >= limit;
+          return `
+            <div class="p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-bold flex items-center justify-center text-slate-500 shrink-0">
+                  ${index + 1}
+                </span>
+                <div class="min-w-0">
+                  <p class="text-sm font-bold truncate">@${escapeHTML(acc.username)}</p>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                    ${acc.timestamp ? `Di-follow sejak ${formatIndonesianDate(acc.timestamp)} (${daysAgoText(acc.timestamp)})` : 'Waktu follow tidak tercatat'}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                <button onclick="toggleWhitelist('${escapeHTML(acc.username)}')" class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                  Whitelist
+                </button>
+                <a href="https://www.instagram.com/${encodeURIComponent(acc.username)}" target="_blank" rel="noopener noreferrer" onclick="markCleanupAccountDone('${escapeHTML(acc.username)}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1.5 ${
+                  isQuotaReached ? 'bg-amber-600 hover:bg-amber-700' : 'ig-gradient hover:opacity-95 shadow-sm'
+                }">
+                  <span>Buka Profil & Tandai Selesai</span>
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render Priority Engagement List
+      const engContainer = document.getElementById('engagementListContainer');
+      if (appState.engagementList.length === 0) {
+        engContainer.innerHTML = `
+          <div class="p-8 text-center text-xs text-slate-400">
+            Belum ada akun prioritas. Tambahkan teman dekat atau kreator di atas untuk checklist interaksi harian.
+          </div>
+        `;
+      } else {
+        engContainer.innerHTML = appState.engagementList.map(item => {
+          const doneToday = item.lastInteractedDate === today;
+          return `
+            <div class="p-3.5 px-5 flex items-center justify-between gap-3 ${doneToday ? 'bg-emerald-500/5' : ''}">
+              <label class="flex items-start gap-3 cursor-pointer min-w-0 flex-1">
+                <input type="checkbox" ${doneToday ? 'checked' : ''} onchange="toggleEngagementToday('${item.id}')" class="mt-1 rounded text-emerald-500 focus:ring-emerald-500 w-4 h-4 cursor-pointer" />
+                <div class="min-w-0">
+                  <p class="text-xs sm:text-sm font-bold truncate ${doneToday ? 'line-through text-slate-400' : ''}">
+                    @${escapeHTML(item.username)}
+                  </p>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">${escapeHTML(item.note)}</p>
+                </div>
+              </label>
+
+              <div class="flex items-center gap-1.5 shrink-0">
+                <a href="https://www.instagram.com/${encodeURIComponent(item.username)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">
+                  Buka IG
+                </a>
+                <button onclick="deleteEngagementAccount('${item.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition" title="Hapus">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // ==================== TAB 3: POST SCHEDULER ====================
+
+    function setSchedulerView(mode) {
+      schedulerViewMode = mode;
+      renderScheduler();
+    }
+
+    function changeCalendarMonth(delta) {
+      currentCalendarDate = new Date(
+        currentCalendarDate.getFullYear(),
+        currentCalendarDate.getMonth() + delta,
+        1
+      );
+      renderScheduler();
+    }
+
+    function openPostModal(postId = null, prefillDateStr = null) {
+      const modal = document.getElementById('postEditorModal');
+      document.getElementById('newHashtagForm').classList.add('hidden');
+
+      // Reset media preview
+      if (activeMediaObjectUrl) {
+        URL.revokeObjectURL(activeMediaObjectUrl);
+        activeMediaObjectUrl = null;
+      }
+      document.getElementById('postMediaInput').value = '';
+      document.getElementById('mediaPreviewImg').classList.add('hidden');
+      document.getElementById('mediaPreviewPlaceholder').classList.remove('hidden');
+
+      if (postId) {
+        const post = appState.posts.find(p => p.id === postId);
+        if (!post) return;
+        document.getElementById('postModalTitle').textContent = 'Edit Jadwal Posting';
+        document.getElementById('postEditId').value = post.id;
+        document.getElementById('postTitleInput').value = post.title;
+        document.getElementById('postFormatInput').value = post.format;
+        document.getElementById('postStatusInput').value = post.status;
+        document.getElementById('postDatetimeInput').value = post.datetime;
+        document.getElementById('postCaptionInput').value = post.caption || '';
+        document.getElementById('chkCover').checked = Boolean(post.checklist?.cover);
+        document.getElementById('chkHook').checked = Boolean(post.checklist?.hook);
+        document.getElementById('chkCta').checked = Boolean(post.checklist?.cta);
+        document.getElementById('chkLocationAlt').checked = Boolean(post.checklist?.locationAlt);
+      } else {
+        document.getElementById('postModalTitle').textContent = 'Buat Jadwal Posting Baru';
+        document.getElementById('postEditId').value = '';
+        document.getElementById('postTitleInput').value = '';
+        document.getElementById('postFormatInput').value = 'Feed';
+        document.getElementById('postStatusInput').value = 'Draft';
+
+        // Default datetime besok jam 19:00 atau tanggal yang diklik di kalender
+        const baseDate = prefillDateStr ? new Date(prefillDateStr + 'T19:00') : new Date(Date.now() + 86400000);
+        const yyyy = baseDate.getFullYear();
+        const mm = String(baseDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(baseDate.getDate()).padStart(2, '0');
+        document.getElementById('postDatetimeInput').value = `${yyyy}-${mm}-${dd}T19:00`;
+
+        document.getElementById('postCaptionInput').value = '';
+        document.getElementById('chkCover').checked = false;
+        document.getElementById('chkHook').checked = false;
+        document.getElementById('chkCta').checked = false;
+        document.getElementById('chkLocationAlt').checked = false;
+      }
+
+      updateCaptionCharCount();
+      updateMediaPreviewAspect();
+      renderHashtagPresets();
+      modal.classList.remove('hidden');
+    }
+
+    function closePostModal() {
+      document.getElementById('postEditorModal').classList.add('hidden');
+    }
+
+    function updateCaptionCharCount() {
+      const len = document.getElementById('postCaptionInput').value.length;
+      document.getElementById('captionCharCounter').textContent = `${len.toLocaleString('id-ID')} / 2.200`;
+    }
+
+    function updateMediaPreviewAspect() {
+      const fmt = document.getElementById('postFormatInput').value;
+      const box = document.getElementById('mediaPreviewBox');
+      if (fmt === 'Reels' || fmt === 'Story') {
+        box.className = 'w-36 aspect-[9/16] mx-auto rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-center p-2 overflow-hidden relative';
+      } else {
+        box.className = 'w-full aspect-[4/5] max-h-52 mx-auto rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-center p-3 overflow-hidden relative';
+      }
+    }
+
+    function handlePostMediaPreview(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (activeMediaObjectUrl) URL.revokeObjectURL(activeMediaObjectUrl);
+      activeMediaObjectUrl = URL.createObjectURL(file);
+
+      const img = document.getElementById('mediaPreviewImg');
+      img.src = activeMediaObjectUrl;
+      img.classList.remove('hidden');
+      document.getElementById('mediaPreviewPlaceholder').classList.add('hidden');
+    }
+
+    function copyModalCaption() {
+      const text = document.getElementById('postCaptionInput').value;
+      if (!text.trim()) {
+        showToast('Caption masih kosong.', 'info');
+        return;
+      }
+      copyTextToClipboard(text, 'Caption & hashtag berhasil disalin!');
+    }
+
+    function toggleNewHashtagForm() {
+      document.getElementById('newHashtagForm').classList.toggle('hidden');
+    }
+
+    function saveNewHashtagPreset() {
+      const name = document.getElementById('newPresetName').value.trim();
+      const tags = document.getElementById('newPresetTags').value.trim();
+      if (!name || !tags) {
+        showToast('Isi nama grup dan daftar hashtag terlebih dahulu.', 'error');
+        return;
+      }
+      appState.hashtagPresets.push({
+        id: 'preset_' + Date.now(),
+        name,
+        tags
+      });
+      document.getElementById('newPresetName').value = '';
+      document.getElementById('newPresetTags').value = '';
+      document.getElementById('newHashtagForm').classList.add('hidden');
+      saveState();
+      renderHashtagPresets();
+      showToast('Preset hashtag disimpan!', 'success');
+    }
+
+    function insertHashtagPreset(presetId) {
+      const preset = appState.hashtagPresets.find(p => p.id === presetId);
+      if (!preset) return;
+      const textarea = document.getElementById('postCaptionInput');
+      const current = textarea.value.trim();
+      textarea.value = current ? `${current}\n\n${preset.tags}` : preset.tags;
+      updateCaptionCharCount();
+      showToast(`Hashtag "${preset.name}" disisipkan!`, 'info');
+    }
+
+    function deleteHashtagPreset(presetId) {
+      appState.hashtagPresets = appState.hashtagPresets.filter(p => p.id !== presetId);
+      saveState();
+      renderHashtagPresets();
+    }
+
+    function renderHashtagPresets() {
+      const wrap = document.getElementById('hashtagPresetPills');
+      if (appState.hashtagPresets.length === 0) {
+        wrap.innerHTML = `<span class="text-[11px] text-slate-400">Belum ada preset hashtag tersimpan.</span>`;
+        return;
+      }
+      wrap.innerHTML = appState.hashtagPresets.map(p => `
+        <div class="inline-flex items-center rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] overflow-hidden">
+          <button type="button" onclick="insertHashtagPreset('${p.id}')" class="px-2.5 py-1 font-semibold hover:bg-pink-500/10 hover:text-pink-600 dark:hover:text-pink-400 transition">
+            + ${escapeHTML(p.name)}
+          </button>
+          <button type="button" onclick="deleteHashtagPreset('${p.id}')" class="px-1.5 py-1 text-slate-400 hover:text-rose-500 border-l border-slate-200 dark:border-slate-700" title="Hapus preset">
+            ×
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function savePostSchedule(e) {
+      e.preventDefault();
+      const editId = document.getElementById('postEditId').value;
+      const postObj = {
+        id: editId || 'post_' + Date.now(),
+        title: document.getElementById('postTitleInput').value.trim(),
+        format: document.getElementById('postFormatInput').value,
+        status: document.getElementById('postStatusInput').value,
+        datetime: document.getElementById('postDatetimeInput').value,
+        caption: document.getElementById('postCaptionInput').value,
+        checklist: {
+          cover: document.getElementById('chkCover').checked,
+          hook: document.getElementById('chkHook').checked,
+          cta: document.getElementById('chkCta').checked,
+          locationAlt: document.getElementById('chkLocationAlt').checked
+        }
+      };
+
+      if (editId) {
+        const idx = appState.posts.findIndex(p => p.id === editId);
+        if (idx > -1) appState.posts[idx] = postObj;
+        showToast('Jadwal posting diperbarui!', 'success');
+      } else {
+        appState.posts.push(postObj);
+        showToast('Jadwal posting baru ditambahkan!', 'success');
+      }
+
+      saveState();
+      closePostModal();
+      renderScheduler();
+    }
+
+    function deletePostSchedule(postId) {
+      openConfirmModal(
+        'Hapus Jadwal Posting?',
+        'Jadwal konten ini akan dihapus permanen dari daftar rencanamu.',
+        () => {
+          appState.posts = appState.posts.filter(p => p.id !== postId);
+          saveState();
+          renderScheduler();
+          showToast('Jadwal posting dihapus.', 'info');
+        }
+      );
+    }
+
+    /**
+     * Membuat & mengunduh file kalender standar RFC 5545 (.ics)
+     * agar pengguna bisa mengimpor pengingat posting ke Google Calendar / Apple Calendar HP.
+     */
+    function downloadPostICS(postId) {
+      const post = appState.posts.find(p => p.id === postId);
+      if (!post || !post.datetime) return;
+
+      const start = new Date(post.datetime);
+      const end = new Date(start.getTime() + 30 * 60000); // Durasi 30 menit
+
+      const toICSDate = (d) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+      };
+
+      const escapeICS = (str) => (str || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+
+      const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//IG SafePulse//Post Scheduler//ID',
+        'CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',
+        `UID:${post.id}@igsafepulse.local`,
+        `DTSTAMP:${toICSDate(new Date())}`,
+        `DTSTART:${toICSDate(start)}`,
+        `DTEND:${toICSDate(end)}`,
+        `SUMMARY:${escapeICS(`[IG ${post.format}] ${post.title}`)}`,
+        `DESCRIPTION:${escapeICS(`Status: ${post.status}\\n\\nCaption:\\n${post.caption || '(Belum ada caption)'}`)}`,
+        'BEGIN:VALARM',
+        'TRIGGER:-PT15M',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${escapeICS(`Waktunya posting IG ${post.format}: ${post.title}`)}`,
+        'END:VALARM',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `IG-Schedule-${post.title.replace(/[^a-z0-9]/gi, '_').slice(0, 25)}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('File pengingat kalender (.ics) diunduh!', 'success');
+    }
+
+    function renderScheduler() {
+      // Update style view switcher
+      const listBtn = document.getElementById('viewListBtn');
+      const calBtn = document.getElementById('viewCalendarBtn');
+      const listView = document.getElementById('schedulerListView');
+      const calView = document.getElementById('schedulerCalendarView');
+
+      if (schedulerViewMode === 'list') {
+        listBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-pink-600 dark:text-pink-400 shadow-sm transition';
+        calBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition';
+        listView.classList.remove('hidden');
+        calView.classList.add('hidden');
+      } else {
+        calBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-pink-600 dark:text-pink-400 shadow-sm transition';
+        listBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition';
+        calView.classList.remove('hidden');
+        listView.classList.add('hidden');
+      }
+
+      const statusFilter = document.getElementById('postStatusFilter').value;
+      const formatFilter = document.getElementById('postFormatFilter').value;
+
+      const filteredPosts = appState.posts
+        .filter(p => (statusFilter === 'ALL' || p.status === statusFilter))
+        .filter(p => (formatFilter === 'ALL' || p.format === formatFilter))
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+      // Render Tampilan Daftar Antrean
+      if (filteredPosts.length === 0) {
+        listView.innerHTML = `
+          <div class="col-span-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-10 text-center space-y-2">
+            <p class="text-sm font-bold text-slate-600 dark:text-slate-300">Belum Ada Jadwal Posting</p>
+            <p class="text-xs text-slate-400">Klik tombol <strong>"+ Buat Jadwal Baru"</strong> untuk mulai merencanakan konten Feed, Reels, atau Story kamu.</p>
+          </div>
+        `;
+      } else {
+        const statusStyles = {
+          'Ide': 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+          'Draft': 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+          'Siap Posting': 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+          'Sudah Tayang': 'bg-purple-500/15 text-purple-600 dark:text-purple-400'
+        };
+
+        const formatStyles = {
+          'Feed': 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
+          'Reels': 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+          'Story': 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+        };
+
+        listView.innerHTML = filteredPosts.map(post => {
+          const chk = post.checklist || {};
+          const doneChk = [chk.cover, chk.hook, chk.cta, chk.locationAlt].filter(Boolean).length;
+
+          return `
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between gap-4">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold ${formatStyles[post.format] || formatStyles.Feed}">
+                    ${escapeHTML(post.format)}
+                  </span>
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusStyles[post.status] || statusStyles.Ide}">
+                    ${escapeHTML(post.status)}
+                  </span>
+                </div>
+
+                <div>
+                  <h4 class="text-sm font-extrabold line-clamp-2">${escapeHTML(post.title)}</h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-pink-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>${formatIndonesianDateTime(post.datetime)}</span>
+                  </p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-600 dark:text-slate-300 line-clamp-3 min-h-[4.2rem]">
+                  ${post.caption ? escapeHTML(post.caption) : '<span class="italic text-slate-400">Belum ada caption...</span>'}
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Checklist Pra-Posting:</span>
+                  <span class="font-bold ${doneChk === 4 ? 'text-emerald-500' : 'text-slate-600 dark:text-slate-300'}">${doneChk}/4 Siap</span>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <button onclick="openPostModal('${post.id}')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">
+                    Edit
+                  </button>
+                  <button onclick="copyTextToClipboard(${JSON.stringify(post.caption || '')}, 'Caption disalin!')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">
+                    Salin Caption
+                  </button>
+                  <button onclick="deletePostSchedule('${post.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition" title="Hapus">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+
+                <button onclick="downloadPostICS('${post.id}')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold ig-gradient text-white shadow-sm hover:opacity-95 transition">
+                  Download (.ics)
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render Tampilan Kalender Bulanan
+      renderMonthlyCalendar(filteredPosts);
+    }
+
+    function renderMonthlyCalendar(posts) {
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+
+      document.getElementById('calendarMonthTitle').textContent = currentCalendarDate.toLocaleDateString('id-ID', {
+        month: 'long',
+        year: 'numeric'
+      });
+
+      const firstDayIndex = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const todayStr = getTodayStr();
+
+      let cellsHTML = '';
+
+      // Sel kosong sebelum tanggal 1
+      for (let i = 0; i < firstDayIndex; i++) {
+        cellsHTML += `<div class="min-h-[92px] sm:min-h-[110px] bg-slate-50/50 dark:bg-slate-950/40 p-1.5"></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const mm = String(month + 1).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        const dateStr = `${year}-${mm}-${dd}`;
+        const isToday = dateStr === todayStr;
+
+        const dayPosts = posts.filter(p => p.datetime && p.datetime.startsWith(dateStr));
+
+        const badgesHTML = dayPosts.map(p => `
+          <button onclick="openPostModal('${p.id}')" class="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate bg-pink-500/15 text-pink-700 dark:text-pink-300 hover:bg-pink-500/25 transition block">
+            [${escapeHTML(p.format)}] ${escapeHTML(p.title)}
+          </button>
+        `).join('');
+
+        cellsHTML += `
+          <div class="min-h-[92px] sm:min-h-[110px] p-1.5 flex flex-col justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition group">
+            <div class="flex items-center justify-between">
+              <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+                isToday ? 'ig-gradient text-white' : 'text-slate-600 dark:text-slate-300'
+              }">
+                ${day}
+              </span>
+              <button onclick="openPostModal(null, '${dateStr}')" class="opacity-0 group-hover:opacity-100 text-[11px] font-bold text-pink-500 px-1.5 rounded hover:bg-pink-500/10 transition" title="Tambah jadwal di tanggal ini">
+                +
+              </button>
+            </div>
+            <div class="space-y-1 mt-1 overflow-y-auto max-h-16">
+              ${badgesHTML}
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById('calendarGrid').innerHTML = cellsHTML;
+    }
+
+    // ==================== TAB 4: EXPORT CSV & BACKUP / RESTORE ====================
+
+    function exportAnalysisCSV() {
+      const data = getComputedAnalytics();
+      if (!data.baseSnap) {
+        showToast('Belum ada data snapshot untuk diekspor.', 'error');
+        return;
+      }
+
+      const whitelistSet = new Set(appState.whitelist);
+      const rows = [
+        ['Kategori', 'Username', 'Tanggal Follow', 'Link Profil Instagram', 'Status Whitelist']
+      ];
+
+      const pushRows = (categoryName, list) => {
+        list.forEach(acc => {
+          rows.push([
+            categoryName,
+            acc.username,
+            acc.timestamp ? formatIndonesianDate(acc.timestamp) : '-',
+            `https://www.instagram.com/${acc.username}`,
+            whitelistSet.has(acc.username) ? 'Ya' : 'Tidak'
+          ]);
+        });
+      };
+
+      pushRows('New Unfollowers', data.newUnfollowers);
+      pushRows('New Followers', data.newFollowers);
+      pushRows('Not Following Back', data.notFollowingBack);
+      pushRows('Fans', data.fans);
+      pushRows('Mutuals', data.mutuals);
+      pushRows('Whitelist', data.whitelistedAccounts);
+
+      const csvContent = '\uFEFF' + rows
+        .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `IG-SafePulse-Laporan-${getTodayStr()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Laporan Excel (.CSV) berhasil diunduh!', 'success');
+    }
+
+    function backupDatabaseJSON() {
+      const backupPayload = {
+        appName: 'IG SafePulse',
+        exportedAt: new Date().toISOString(),
+        data: appState
+      };
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ig-safepulse-backup-${getTodayStr()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Backup database lokal (.JSON) berhasil diunduh!', 'success');
+    }
+
+    async function restoreDatabaseJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const restored = parsed.data ? parsed.data : parsed;
+
+        if (!Array.isArray(restored.snapshots)) {
+          throw new Error('Struktur file backup tidak valid.');
+        }
+
+        appState = {
+          ...appState,
+          ...restored
+        };
+        saveState();
+        applyTheme();
+        switchMainTab(appState.activeTab || 'tracker');
+        showToast('Database lokal berhasil di-restore!', 'success');
+      } catch (err) {
+        showToast('File backup tidak valid atau rusak.', 'error');
+      } finally {
+        event.target.value = '';
+      }
+    }
+
+    function confirmResetAllData() {
+      openConfirmModal(
+        'Reset Semua Data Lokal?',
+        'Seluruh snapshot, whitelist, log cleanup, dan jadwal posting di browser ini akan dihapus permanen.',
+        () => {
+          localStorage.removeItem(STORAGE_KEY);
+          location.reload();
+        }
+      );
+    }
+
+    // ==================== DATA DEMO SIMULASI ====================
+
+    function loadDemoData() {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const daySec = 86400;
+
+      // Daftar akun realistis untuk simulasi
+      const mutualUsers = [
+        'nadia.putri', 'rizkypratama_', 'dinda.kirana', 'fajar.ramadhan', 'auliasalsabila',
+        'bimo.setiawan', 'clarissa.tan', 'dimas.anggara', 'elinawijaya', 'gilang.dirga99',
+        'hanifah.rahma', 'ilham.saputra', 'jessica.lim', 'kevin.sanjaya', 'larasati.ayu'
+      ];
+
+      const notFollbackUsers = [
+        { u: 'folkative', days: 680 },
+        { u: 'tahilalats', days: 610 },
+        { u: 'pandji.pragiwaksono', days: 540 },
+        { u: 'raffi_nagita1717', days: 490 },
+        { u: 'teman.lama.sma', days: 430 },
+        { u: 'kenalan.event.jkt', days: 385 },
+        { u: 'toko.sepatu.lokal', days: 310 },
+        { u: 'akun.olshop.lama', days: 275 },
+        { u: 'fotografer.bandung', days: 210 },
+        { u: 'coffee.shop.hits', days: 165 },
+        { u: 'kreator.tech.id', days: 120 },
+        { u: 'desain.grafis.harian', days: 85 }
+      ];
+
+      const fansUsers = [
+        { u: 'siti.nurhaliza22', days: 45 },
+        { u: 'arya.wiguna', days: 30 },
+        { u: 'putri.melati', days: 18 },
+        { u: 'bagas.kara', days: 9 }
+      ];
+
+      // Akun yang dulu follow di Snapshot 1, tapi unfollow di Snapshot 2
+      const unfollowedUsers = [
+        { u: 'aldi.taher.fanpage', days: 240 },
+        { u: 'selebgram.promo.id', days: 190 },
+        { u: 'raka.mahendra_', days: 150 }
+      ];
+
+      // Pengikut baru di Snapshot 2
+      const newFollowerUsers = [
+        { u: 'maya.estetica', days: 2 },
+        { u: 'hendra.kurniawan', days: 1 }
+      ];
+
+      const makeAcc = (u, daysAgo) => ({
+        username: u,
+        href: `https://www.instagram.com/${u}`,
+        timestamp: nowSec - (daysAgo * daySec)
+      });
+
+      // Snapshot 1 (7 hari lalu)
+      const snap1Followers = [
+        ...mutualUsers.map((u, i) => makeAcc(u, 300 - i * 10)),
+        ...fansUsers.map(x => makeAcc(x.u, x.days)),
+        ...unfollowedUsers.map(x => makeAcc(x.u, x.days))
+      ];
+      const snap1Following = [
+        ...mutualUsers.map((u, i) => makeAcc(u, 305 - i * 10)),
+        ...notFollbackUsers.map(x => makeAcc(x.u, x.days)),
+        ...unfollowedUsers.map(x => makeAcc(x.u, x.days))
+      ];
+
+      // Snapshot 2 (Hari ini)
+      const snap2Followers = [
+        ...mutualUsers.map((u, i) => makeAcc(u, 300 - i * 10)),
+        ...fansUsers.map(x => makeAcc(x.u, x.days)),
+        ...newFollowerUsers.map(x => makeAcc(x.u, x.days))
+      ];
+      const snap2Following = [
+        ...mutualUsers.map((u, i) => makeAcc(u, 305 - i * 10)),
+        ...notFollbackUsers.map(x => makeAcc(x.u, x.days)),
+        ...unfollowedUsers.map(x => makeAcc(x.u, x.days))
+      ];
+
+      const sevenDaysAgoMs = Date.now() - (7 * 86400000);
+      const snap1Id = 'snap_demo_1_' + Date.now();
+      const snap2Id = 'snap_demo_2_' + (Date.now() + 1);
+
+      appState.snapshots = [
+        {
+          id: snap2Id,
+          label: 'Data Demo — Hari Ini',
+          timestamp: Date.now(),
+          followers: snap2Followers,
+          following: snap2Following
+        },
+        {
+          id: snap1Id,
+          label: 'Data Demo — 7 Hari Lalu',
+          timestamp: sevenDaysAgoMs,
+          followers: snap1Followers,
+          following: snap1Following
+        }
+      ];
+
+      appState.selectedBaseSnapId = snap2Id;
+      appState.selectedCompareSnapId = snap1Id;
+
+      if (appState.whitelist.length === 0) {
+        appState.whitelist = ['folkative', 'tahilalats'];
+      }
+
+      if (appState.engagementList.length === 0) {
+        appState.engagementList = [
+          { id: 'eng_demo_1', username: 'nadia.putri', note: 'Teman kampus — sering interaksi di Reels', lastInteractedDate: null },
+          { id: 'eng_demo_2', username: 'kreator.tech.id', note: 'Kreator satu niche — rencana kolaborasi', lastInteractedDate: getTodayStr() }
+        ];
+      }
+
+      if (appState.posts.length === 0) {
+        const tomorrow = new Date(Date.now() + 86400000);
+        const dayAfter = new Date(Date.now() + 3 * 86400000);
+        const fmtLocalISO = (d, hourStr) => {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}T${hourStr}`;
+        };
+
+        appState.posts = [
+          {
+            id: 'post_demo_1',
+            title: '3 Kebiasaan Pagi yang Bikin Kerja Lebih Fokus',
+            format: 'Reels',
+            status: 'Siap Posting',
+            datetime: fmtLocalISO(tomorrow, '19:00'),
+            caption: 'Sering ngerasa waktu habis tapi kerjaan belum kelar? Coba terapkan 3 kebiasaan pagi ini selama seminggu!\n\nSimpan video ini biar nggak lupa 👇\n\n#produktivitas #kebiasaanbaik #tipsfokus #indonesia',
+            checklist: { cover: true, hook: true, cta: true, locationAlt: true }
+          },
+          {
+            id: 'post_demo_2',
+            title: 'Carousel: Setup Meja Kerja Minimalis 2026',
+            format: 'Feed',
+            status: 'Draft',
+            datetime: fmtLocalISO(dayAfter, '12:30'),
+            caption: 'Banyak yang tanya soal monitor dan lampu meja yang aku pakai sehari-hari. Geser slide sampai akhir untuk detail lengkapnya!\n\n#desksetup #minimalistworkspace #techtips',
+            checklist: { cover: true, hook: true, cta: false, locationAlt: false }
+          }
+        ];
+      }
+
+      saveState();
+      renderTrackerDashboard();
+      renderCleanupTab();
+      renderScheduler();
+      showToast('Data Demo berhasil dimuat! Silakan jelajahi semua tab.', 'success');
+    }
+
+    // ==================== INITIALIZATION ====================
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      applyTheme();
+      switchMainTab(appState.activeTab || 'tracker');
+    });
+  </script>
+</body>
+</html>
